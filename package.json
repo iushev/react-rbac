@@ -1,0 +1,26 @@
+{
+  "name": "@iushev/react-rbac",
+  "version": "1.0.0",
+  "private": false,
+  "author": "Ivaylo Ushev",
+  "description": "",
+  "license": "ISC",
+  "main": "./build",
+  "scripts": {
+    "build": "tsc -p ./src",
+    "watch": "tsc -w -p ./src",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "@types/react": "^17.0.3",
+    "@types/react-dom": "^17.0.3",
+    "typescript": "^4.2.3"
+  },
+  "pearDependencies": {
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
