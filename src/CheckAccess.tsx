@@ -1,14 +1,15 @@
 import React, { useContext } from "react";
-// import { UserContext } from '../UserContext';
+import { RuleParams } from "@iushev/rbac";
 
-export type RoleParams = { [key: string]: any };
-export type RoleParamsFunction = () => RoleParams;
+import RbacContext from "./RbacContext";
+
 export type MatchFunction = () => boolean;
 
 export type CheckAccessProps = {
   allow?: boolean;
   roles: string[];
-  roleParams?: RoleParams | RoleParamsFunction;
+  // roleParams?: RoleParams | RoleParamsFunction;
+  roleParams?: RuleParams;
   match?: MatchFunction;
   noAccess: React.ComponentType;
 };
@@ -16,12 +17,12 @@ export type CheckAccessProps = {
 const CheckAccess: React.FC<CheckAccessProps> = ({
   allow = true,
   roles,
-  roleParams,
+  roleParams = {},
   match,
   noAccess: NoAccess,
   children,
 }) => {
-  // const user = useContext(UserContext);
+  const rbac = useContext(RbacContext);
 
   const matchRole = () => {
     if (!roles || roles.length === 0) {
@@ -33,7 +34,7 @@ const CheckAccess: React.FC<CheckAccessProps> = ({
       _roleParams = roleParams();
     }
 
-    return true; //roles.some((role) => user.can(role, _roleParams));
+    return roles.some((role) => rbac.checkAccess(role, _roleParams));
   }
 
   const matchCustom = () => {

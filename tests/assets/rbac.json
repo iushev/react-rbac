@@ -1,0 +1,50 @@
+{
+  "items": {
+    "reader": {
+      "type": "role",
+      "name": "reader",
+      "children": ["readPost"]
+    },
+    "author": {
+      "type": "role",
+      "name": "author",
+      "children": ["reader", "updateOwnPost", "createPost"]
+    },
+    "admin": {
+      "type": "role",
+      "name": "admin",
+      "children": ["updatePost", "author"]
+    },
+    "createPost": {
+      "type": "permission",
+      "name": "createPost",
+      "children": []
+    },
+    "readPost": {
+      "type": "permission",
+      "name": "readPost",
+      "children": []
+    },
+    "updatePost": {
+      "type": "permission",
+      "name": "updatePost",
+      "children": []
+    },
+    "updateOwnPost": {
+      "type": "permission",
+      "name": "updateOwnPost",
+      "ruleName": "isAuthor",
+      "children": ["updatePost"]
+    }
+  },
+  "rules": {
+    "isAuthor": {
+      "name": "isAuthor",
+      "data": {
+        "typeName": "Rule",
+        "rule": "{\"name\":\"isAuthor\",\"data\":{\"name\":\"isAuthor\",\"data\":{}}}"
+      }
+    }
+  },
+  "assignments": ["reader"]
+}
