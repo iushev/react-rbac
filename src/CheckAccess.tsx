@@ -2,6 +2,7 @@ import React, { useContext } from "react";
 import { RuleParams } from "@iushev/rbac";
 
 import RbacContext from "./RbacContext";
+import NoAccess from "./NoAccess";
 
 export type MatchFunction = () => boolean;
 
@@ -11,7 +12,7 @@ export type CheckAccessProps = {
   // roleParams?: RoleParams | RoleParamsFunction;
   roleParams?: RuleParams;
   match?: MatchFunction;
-  noAccess: React.ComponentType;
+  noAccess?: React.ComponentType;
 };
 
 const CheckAccess: React.FC<CheckAccessProps> = ({
@@ -19,7 +20,7 @@ const CheckAccess: React.FC<CheckAccessProps> = ({
   roles,
   roleParams = {},
   match,
-  noAccess: NoAccess,
+  noAccess: NoAccessComponent = NoAccess,
   children,
 }) => {
   const rbac = useContext(RbacContext);
@@ -52,7 +53,7 @@ const CheckAccess: React.FC<CheckAccessProps> = ({
     );
   }
 
-  return <NoAccess />;
+  return <NoAccessComponent />;
 };
 
 export default CheckAccess;

@@ -11,7 +11,7 @@ import {
   RuleParams,
   Rule,
   RuleCtor,
-  Item
+  Item,
 } from "@iushev/rbac";
 
 export type RbacContextProps = {
@@ -31,7 +31,15 @@ export type RbacProviderProps = {
   ruleClasses: Map<string, RuleCtor<Rule>>;
 };
 
-export const RbacProvider: React.FC<RbacProviderProps> = ({ username, rbacUrl, token, isSuperuser, isGuest, ruleClasses, children }) => {
+export const RbacProvider: React.FC<RbacProviderProps> = ({
+  username,
+  rbacUrl,
+  token,
+  isSuperuser,
+  isGuest,
+  ruleClasses,
+  children,
+}) => {
   const [items, setItems] = useState<Map<string, RbacItem>>(new Map());
   const [parents, setParents] = useState<Map<string, Map<string, RbacItem>>>(new Map());
   const [rules, setRules] = useState<Map<string, RbacRule>>(new Map());
@@ -49,7 +57,7 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({ username, rbacUrl, t
     setItems(
       Object.keys(_rbac.items).reduce<Map<string, RbacItem>>((prevValue, name) => {
         const item = _rbac.items[name];
-        const ItemClass = item.type == RbacItemType.permission ? Permission : Role;
+        const ItemClass = item.type === RbacItemType.permission ? Permission : Role;
         prevValue.set(
           name,
           new ItemClass({
@@ -86,7 +94,7 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({ username, rbacUrl, t
     );
 
     setRules(
-      Object.keys(rules).reduce<Map<string, RbacRule>>((prevValue, name) => {
+      Object.keys(_rbac.rules).reduce<Map<string, RbacRule>>((prevValue, name) => {
         const ruleData = _rbac.rules[name];
         const RuleClass = ruleClasses.get(ruleData.data.typeName) ?? Rule;
         const rule = new RuleClass(name, JSON.parse(ruleData.data.rule));
@@ -96,7 +104,7 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({ username, rbacUrl, t
     );
 
     setAssignments(_rbac.assignments);
-  }, [rbacUrl, token]);
+  }, [rbacUrl, token, ruleClasses]);
 
   useEffect(() => {
     fetchRbac();
@@ -114,7 +122,7 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({ username, rbacUrl, t
     }
 
     return rule.execute(username, item, params);
-  }
+  };
 
   const checkAccessRecursive = (permissionName: string, params: RuleParams) => {
     const item = items.get(permissionName);
@@ -127,13 +135,13 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({ username, rbacUrl, t
       return false;
     }
 
-    if (assignments.indexOf(permissionName) > -1/* || defaultRoles.includes(itemName)*/) {
+    if (assignments.indexOf(permissionName) > -1 /* || defaultRoles.includes(itemName)*/) {
       return true;
     }
 
-    const _parents = parents.get(permissionName);
-    if (_parents && _parents.size > 0) {
-      for (let parentName of parents.keys()) {
+    const permissionParents = parents.get(permissionName);
+    if (permissionParents && permissionParents.size > 0) {
+      for (let parentName of permissionParents.keys()) {
         if (checkAccessRecursive(parentName, params)) {
           return true;
         }
@@ -175,7 +183,7 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({ username, rbacUrl, t
         checkAccess,
       }}
     >
-      { children }
+      {children}
     </RbacContext.Provider>
   );
 };
