@@ -175,7 +175,7 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({ username, rbacUrl, t
         checkAccess,
       }}
     >
-      children
+      { children }
     </RbacContext.Provider>
   );
 };
