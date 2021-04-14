@@ -1,59 +1,47 @@
-import React, { useContext } from "react";
-import { RuleParams } from "@iushev/rbac";
+import React, { useContext, useEffect, useState } from "react";
 
-import RbacContext from "./RbacContext";
+import RbacContext, { CheckAccessOptions } from "./RbacContext";
 import NoAccess from "./NoAccess";
 
-export type MatchFunction = () => boolean;
-
-export type CheckAccessProps = {
-  allow?: boolean;
-  roles: string[];
-  // roleParams?: RoleParams | RoleParamsFunction;
-  roleParams?: RuleParams;
-  match?: MatchFunction;
+export type CheckAccessProps = CheckAccessOptions & {
+  busy?: React.ComponentType;
   noAccess?: React.ComponentType;
 };
 
 const CheckAccess: React.FC<CheckAccessProps> = ({
-  allow = true,
   roles,
-  roleParams = {},
+  allow,
+  params,
   match,
+  busy: BusyComponent = () => null,
   noAccess: NoAccessComponent = NoAccess,
   children,
 }) => {
   const rbac = useContext(RbacContext);
 
-  const matchRole = () => {
-    if (!roles || roles.length === 0) {
-      return true;
-    }
+  const [checking, setChecking] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
 
-    let _roleParams = roleParams;
-    if (typeof roleParams === "function") {
-      _roleParams = roleParams();
-    }
+  useEffect(() => {
+    setChecking(true);
+    setHasAccess(false);
 
-    return roles.some((role) => rbac.checkAccess(role, _roleParams));
+    rbac.checkAccess({ roles, allow, params, match })
+      .then((result) => {
+        setChecking(false);
+        setHasAccess(result);
+      })
+      .catch(() => {
+        setChecking(false);
+        setHasAccess(false);
+      });
+  }, []);
+
+  if (checking) {
+    return <BusyComponent />;
   }
 
-  const matchCustom = () => {
-    if (!match) {
-      return true;
-    }
-    return match();
-  }
-
-  if (matchRole() && matchCustom() && allow) {
-    return (
-      <>
-        { children }
-      </>
-    );
-  }
-
-  return <NoAccessComponent />;
+  return <>{hasAccess ? <>{children}</> : <NoAccessComponent />}</>;
 };
 
 export default CheckAccess;

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 
 import {
@@ -12,14 +12,25 @@ import {
   Rule,
   RuleCtor,
   Item,
+  BaseCheckAccess,
 } from "@iushev/rbac";
+import RbacCheckAccess from "./RbacCheckAccess";
+
+export type RuleParamsFunction = () => RuleParams;
+export type MatchFunction = () => boolean;
+export type CheckAccessOptions = {
+    roles: string[];
+    allow?: boolean;
+    params?: RuleParams | RuleParamsFunction;
+    match?: MatchFunction;
+};
 
 export type RbacContextProps = {
-  checkAccess: (permissionName: string, params: RuleParams) => boolean;
+  checkAccess: (options: CheckAccessOptions) => Promise<boolean>;
 };
 
 const RbacContext = React.createContext<RbacContextProps>({
-  checkAccess: (_permissionName: string, _params: RuleParams) => true,
+  checkAccess: async (_options: CheckAccessOptions) => true,
 });
 
 export type RbacProviderProps = {
@@ -40,141 +51,62 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({
   ruleClasses,
   children,
 }) => {
-  const [items, setItems] = useState<Map<string, RbacItem>>(new Map());
-  const [parents, setParents] = useState<Map<string, Map<string, RbacItem>>>(new Map());
-  const [rules, setRules] = useState<Map<string, RbacRule>>(new Map());
-  const [assignments, setAssignments] = useState<Array<string>>([]);
-
-  const fetchRbac = useCallback(async () => {
-    const response = await axios.get<RBACResponse>(rbacUrl, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const _rbac = response.data;
-
-    setItems(
-      Object.keys(_rbac.items).reduce<Map<string, RbacItem>>((prevValue, name) => {
-        const item = _rbac.items[name];
-        const ItemClass = item.type === RbacItemType.permission ? Permission : Role;
-        prevValue.set(
-          name,
-          new ItemClass({
-            name,
-            type: item.type,
-            description: item.description ?? null,
-            ruleName: item.ruleName ?? null,
-          })
-        );
-        return prevValue;
-      }, new Map())
-    );
-
-    setParents(
-      Object.keys(_rbac.items).reduce<Map<string, Map<string, RbacItem>>>((prevValue, name) => {
-        const item = _rbac.items[name];
-        if (!item.children || item.children.length === 0) {
-          return prevValue;
-        }
-        item.children.forEach((childName: string) => {
-          if (!items.has(childName)) {
-            return;
-          }
-
-          if (!prevValue.has(childName)) {
-            prevValue.set(childName, new Map());
-          }
-
-          prevValue.get(childName)!.set(name, items.get(name)!);
-        });
-
-        return prevValue;
-      }, new Map())
-    );
-
-    setRules(
-      Object.keys(_rbac.rules).reduce<Map<string, RbacRule>>((prevValue, name) => {
-        const ruleData = _rbac.rules[name];
-        const RuleClass = ruleClasses.get(ruleData.data.typeName) ?? Rule;
-        const rule = new RuleClass(name, JSON.parse(ruleData.data.rule));
-        prevValue.set(name, rule);
-        return prevValue;
-      }, new Map())
-    );
-
-    setAssignments(_rbac.assignments);
-  }, [rbacUrl, token, ruleClasses]);
+  const [rbac, setRbac] = useState<RbacCheckAccess | null>(null);
 
   useEffect(() => {
-    fetchRbac();
-  }, [fetchRbac]);
+    console.log({rbacUrl});
+    setRbac(
+      new RbacCheckAccess({
+        path: rbacUrl,
+        authorization: () => {
+          return token;
+        },
+      })
+    );
+  }, [rbacUrl, token]);
 
-  const executeRule = (item: Item, params: RuleParams): boolean => {
-    if (!item.ruleName) {
-      return true;
-    }
+  const checkAccess = async ({ roles, allow = true, match, params = {} }: CheckAccessOptions) => {
+    const matchRole = async () => {
+      if (!roles || roles.length === 0) {
+        return true;
+      }
 
-    const rule = rules?.get(item.ruleName);
+      let _params = params;
+      if (typeof params === "function") {
+        _params = params();
+      }
 
-    if (!rule) {
-      throw new Error(`Rule "${item.ruleName}" does not exists. Or rules does not loaded.`);
-    }
-
-    return rule.execute(username, item, params);
-  };
-
-  const checkAccessRecursive = (permissionName: string, params: RuleParams) => {
-    const item = items.get(permissionName);
-
-    if (!item) {
-      return false;
-    }
-
-    if (!executeRule(item, params)) {
-      return false;
-    }
-
-    if (assignments.indexOf(permissionName) > -1 /* || defaultRoles.includes(itemName)*/) {
-      return true;
-    }
-
-    const permissionParents = parents.get(permissionName);
-    if (permissionParents && permissionParents.size > 0) {
-      for (let parentName of permissionParents.keys()) {
-        if (checkAccessRecursive(parentName, params)) {
-          return true;
+      for (const role of roles) {
+        if (role === "?") {
+          if (isGuest) {
+            return true;
+          }
+        } else if (role === "@") {
+          if (!isGuest) {
+            return true;
+          }
+        } else {
+          if (await rbac?.checkAccess(username, role, _params)) {
+            return true;
+          }
         }
       }
-    }
-    return false;
-  };
 
-  const checkAccess = (permissionName: string, params: RuleParams) => {
-    if (isSuperuser) {
+      return false;
+    }
+
+    const matchCustom = () => {
+      if (!match) {
+        return true;
+      }
+      return match();
+    }
+
+    if (isSuperuser || await matchRole() && matchCustom() && allow) {
       return true;
     }
 
-    if (permissionName === "?") {
-      if (isGuest) {
-        return true;
-      }
-    } else if (permissionName === "@") {
-      if (!isGuest) {
-        return true;
-      }
-    }
-
-    // if (allowCaching && params.length === 0 && this._access[permissionName]) {
-    //   return this._access[permissionName];
-    // }
-
-    const access = checkAccessRecursive(permissionName, params);
-    // if (allowCaching && params.length === 0) {
-    //   this._access[permissionName] = access;
-    // }
-
-    return access;
+    return false;
   };
 
   return (
