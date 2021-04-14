@@ -5,6 +5,7 @@ import {
   Item,
   ItemType,
   Permission,
+  RBACResponse,
   Role,
   Rule,
   RuleParams,
@@ -20,7 +21,7 @@ export type RbacCheckAccessOptions = BaseCheckAccessOptions & {
 export default class RbacCheckAccess extends BaseCheckAccess {
   private axiosInstance: AxiosInstance;
 
-  protected assignments: Map<string, Assignment> = new Map();
+  protected assignments: Map<string, Map<string, Assignment>> = new Map();
 
   constructor(options: RbacCheckAccessOptions) {
     super(options);
@@ -41,12 +42,16 @@ export default class RbacCheckAccess extends BaseCheckAccess {
   }
 
   public async checkAccess(username: string, itemName: string, params: RuleParams): Promise<boolean> {
-    return super.checkAccess(username, itemName, params, this.assignments);
+    if (this.items.size === 0) {
+      await this.load();
+    }
+
+    return super.checkAccess(username, itemName, params, this.assignments.get(username) ?? new Map());
   }
 
-  protected async load(): Promise<void> {
-    const response = await this.axiosInstance.get("/rbac");
-
+  public async load(): Promise<void> {
+    console.log("Load RBAC");
+    const response = await this.axiosInstance.get<RBACResponse>("/rbac");
     const _rbac = response.data;
 
     this.items = Object.keys(_rbac.items).reduce<Map<string, Item>>((prevValue, name) => {
@@ -92,6 +97,36 @@ export default class RbacCheckAccess extends BaseCheckAccess {
       return prevValue;
     }, new Map());
 
-    this.assignments = _rbac.assignments;
+    this.assignments = Object.keys(_rbac.assignments).reduce<Map<string, Map<string, Assignment>>>(
+      (prevValue, username) => {
+        const assignments = _rbac.assignments[username];
+        assignments.forEach((itemName) => {
+          if (prevValue.has(username)) {
+            prevValue.get(username)?.set(
+              itemName,
+              new Assignment({
+                itemName,
+                username,
+              })
+            );
+          } else {
+            prevValue.set(
+              username,
+              new Map([
+                [
+                  itemName,
+                  new Assignment({
+                    itemName,
+                    username,
+                  }),
+                ],
+              ])
+            );
+          }
+        });
+        return prevValue;
+      },
+      new Map()
+    );
   }
 }

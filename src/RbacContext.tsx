@@ -1,28 +1,15 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import axios from "axios";
+import React, { useEffect, useMemo, useState } from "react";
 
-import {
-  Permission,
-  Role,
-  Item as RbacItem,
-  Rule as RbacRule,
-  ItemType as RbacItemType,
-  RBACResponse,
-  RuleParams,
-  Rule,
-  RuleCtor,
-  Item,
-  BaseCheckAccess,
-} from "@iushev/rbac";
+import { RuleParams, Rule, RuleCtor } from "@iushev/rbac";
 import RbacCheckAccess from "./RbacCheckAccess";
 
 export type RuleParamsFunction = () => RuleParams;
 export type MatchFunction = () => boolean;
 export type CheckAccessOptions = {
-    roles: string[];
-    allow?: boolean;
-    params?: RuleParams | RuleParamsFunction;
-    match?: MatchFunction;
+  roles: string[];
+  allow?: boolean;
+  params?: RuleParams | RuleParamsFunction;
+  match?: MatchFunction;
 };
 
 export type RbacContextProps = {
@@ -54,70 +41,70 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({
   const [rbac, setRbac] = useState<RbacCheckAccess | null>(null);
 
   useEffect(() => {
-    console.log({rbacUrl});
-    setRbac(
-      new RbacCheckAccess({
+    if (!token) {
+      setRbac(null);
+    } else {
+      const _rbac = new RbacCheckAccess({
         path: rbacUrl,
         authorization: () => {
           return token;
         },
-      })
-    );
+      });
+      _rbac.load().then(() => setRbac(_rbac));
+    }
   }, [rbacUrl, token]);
 
-  const checkAccess = async ({ roles, allow = true, match, params = {} }: CheckAccessOptions) => {
-    const matchRole = async () => {
-      if (!roles || roles.length === 0) {
-        return true;
-      }
+  const value = useMemo(() => {
+    const checkAccess = async ({ roles, allow = true, match, params = {} }: CheckAccessOptions) => {
+      const matchRole = async () => {
+        if (!roles || roles.length === 0) {
+          return true;
+        }
 
-      let _params = params;
-      if (typeof params === "function") {
-        _params = params();
-      }
+        let _params = params;
+        if (typeof params === "function") {
+          _params = params();
+        }
 
-      for (const role of roles) {
-        if (role === "?") {
-          if (isGuest) {
-            return true;
-          }
-        } else if (role === "@") {
-          if (!isGuest) {
-            return true;
-          }
-        } else {
-          if (await rbac?.checkAccess(username, role, _params)) {
-            return true;
+        for (const role of roles) {
+          if (role === "?") {
+            if (isGuest) {
+              return true;
+            }
+          } else if (role === "@") {
+            if (!isGuest) {
+              return true;
+            }
+          } else {
+            if (await rbac?.checkAccess(username, role, _params)) {
+              return true;
+            }
           }
         }
+
+        return false;
+      };
+
+      const matchCustom = () => {
+        if (!match) {
+          return true;
+        }
+        return match();
+      };
+
+      if (isSuperuser || ((await matchRole()) && matchCustom() && allow)) {
+        return true;
       }
 
       return false;
-    }
+    };
 
-    const matchCustom = () => {
-      if (!match) {
-        return true;
-      }
-      return match();
-    }
+    return {
+      checkAccess,
+    };
+  }, [rbac, username, isGuest, isSuperuser]);
 
-    if (isSuperuser || await matchRole() && matchCustom() && allow) {
-      return true;
-    }
-
-    return false;
-  };
-
-  return (
-    <RbacContext.Provider
-      value={{
-        checkAccess,
-      }}
-    >
-      {children}
-    </RbacContext.Provider>
-  );
+  return <RbacContext.Provider value={value}>{children}</RbacContext.Provider>;
 };
 
 export const RbacConsumer = RbacContext.Consumer;

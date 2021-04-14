@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 
 import RbacContext, { CheckAccessOptions } from "./RbacContext";
 import NoAccess from "./NoAccess";
@@ -17,25 +17,37 @@ const CheckAccess: React.FC<CheckAccessProps> = ({
   noAccess: NoAccessComponent = NoAccess,
   children,
 }) => {
+  const componentIsMounted = useRef(true);
   const rbac = useContext(RbacContext);
 
   const [checking, setChecking] = useState(false);
   const [hasAccess, setHasAccess] = useState(false);
 
   useEffect(() => {
+    return () => {
+      componentIsMounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
     setChecking(true);
     setHasAccess(false);
 
-    rbac.checkAccess({ roles, allow, params, match })
+    rbac
+      .checkAccess({ roles, allow, params, match })
       .then((result) => {
-        setChecking(false);
-        setHasAccess(result);
+        if (componentIsMounted.current) {
+          setChecking(false);
+          setHasAccess(result);
+        }
       })
       .catch(() => {
-        setChecking(false);
-        setHasAccess(false);
+        if (componentIsMounted.current) {
+          setChecking(false);
+          setHasAccess(false);
+        }
       });
-  }, []);
+  }, [rbac, roles, allow, params, match]);
 
   if (checking) {
     return <BusyComponent />;
