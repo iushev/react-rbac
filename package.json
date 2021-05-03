@@ -16,7 +16,7 @@
   },
   "peerDependencies": {
     "@iushev/rbac": "^1.0.18",
-    "@types/react": "^16.14.5 || ^17.0.3",
+    "@types/react": "^16.14.5 || ^17.0.4",
     "@types/react-dom": "^16.9.12 || ^17.0.3",
     "axios": "^0.21.1",
     "react": "^16.14.0 || ^17.0.2",
