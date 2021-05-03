@@ -15,7 +15,7 @@
     "typescript": "^4.2.4"
   },
   "peerDependencies": {
-    "@iushev/rbac": "^1.0.18",
+    "@iushev/rbac": "^1.0.19",
     "@types/react": "^16.14.5 || ^17.0.4",
     "@types/react-dom": "^16.9.12 || ^17.0.3",
     "axios": "^0.21.1",
