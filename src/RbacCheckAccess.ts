@@ -31,11 +31,15 @@ export default class RbacCheckAccess extends BaseCheckAccess {
     });
 
     this.axiosInstance.interceptors.request.use((config) => {
+      if (!config.headers) {
+        config.headers = {};
+      }
+
       if (options.authorization) {
         const token = options.authorization();
-        config.headers.common["Authorization"] = "Bearer " + token;
+        (config.headers.common as any as Record<string, string>)["Authorization"] = "Bearer " + token;
       } else {
-        config.headers.common["Authorization"] = null;
+        (config.headers.common as any as Record<string, string>)["Authorization"] = "";
       }
       return config;
     });
