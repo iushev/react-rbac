@@ -1,3 +1,6 @@
+import axios, { AxiosInstance } from "axios";
+import statusCodes from "http-status-codes";
+
 import {
   Assignment,
   BaseCheckAccess,
@@ -10,8 +13,6 @@ import {
   Rule,
   RuleParams,
 } from "@iushev/rbac";
-
-import axios, { AxiosInstance } from "axios";
 
 export type RbacCheckAccessOptions = BaseCheckAccessOptions & {
   path: string;
@@ -54,12 +55,31 @@ export default class RbacCheckAccess extends BaseCheckAccess {
   }
 
   public async load(): Promise<void> {
-    console.log("Load RBAC");
-    const response = await this.axiosInstance.get<RBACResponse>("/rbac");
-    const _rbac = response.data;
+    let _rbac: RBACResponse;
+    try {
+      console.log("Load RBAC");
+      const response = await this.axiosInstance.get<RBACResponse>("/rbac");
+      _rbac = response.data;
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === statusCodes.NOT_FOUND) {
+        _rbac = {
+          assignments: {},
+          items: {},
+          rules: {},
+        };
+      }
+      throw err;
+    }
 
-    this.items = Object.keys(_rbac.items).reduce<Map<string, Item>>((prevValue, name) => {
-      const item = _rbac.items[name];
+    this.items = this.getRbacItems(_rbac);
+    this.parents = this.getRbacParents(_rbac);
+    this.rules = this.getRbacRules(_rbac);
+    this.assignments = this.getRbacAssignments(_rbac);
+  }
+
+  private getRbacItems({ items }: RBACResponse) {
+    return Object.keys(items).reduce<Map<string, Item>>((prevValue, name) => {
+      const item = items[name];
       const ItemClass = item.type === ItemType.permission ? Permission : Role;
       prevValue.set(
         name,
@@ -72,9 +92,11 @@ export default class RbacCheckAccess extends BaseCheckAccess {
       );
       return prevValue;
     }, new Map());
+  }
 
-    this.parents = Object.keys(_rbac.items).reduce<Map<string, Map<string, Item>>>((prevValue, name) => {
-      const item = _rbac.items[name];
+  private getRbacParents({ items }: RBACResponse) {
+    return Object.keys(items).reduce<Map<string, Map<string, Item>>>((prevValue, name) => {
+      const item = items[name];
       if (!item.children || item.children.length === 0) {
         return prevValue;
       }
@@ -92,45 +114,46 @@ export default class RbacCheckAccess extends BaseCheckAccess {
 
       return prevValue;
     }, new Map());
+  }
 
-    this.rules = Object.keys(_rbac.rules).reduce<Map<string, Rule>>((prevValue, name) => {
-      const ruleData = _rbac.rules[name];
+  private getRbacRules({ rules }: RBACResponse) {
+    return Object.keys(rules).reduce<Map<string, Rule>>((prevValue, name) => {
+      const ruleData = rules[name];
       const RuleClass = this.ruleClasses.get(ruleData.data.typeName) ?? Rule;
       const rule = new RuleClass(name, JSON.parse(ruleData.data.rule));
       prevValue.set(name, rule);
       return prevValue;
     }, new Map());
+  }
 
-    this.assignments = Object.keys(_rbac.assignments).reduce<Map<string, Map<string, Assignment>>>(
-      (prevValue, username) => {
-        const assignments = _rbac.assignments[username];
-        assignments.forEach((itemName) => {
-          if (prevValue.has(username)) {
-            prevValue.get(username)?.set(
+  private getRbacAssignments({ assignments }: RBACResponse) {
+    return Object.keys(assignments).reduce<Map<string, Map<string, Assignment>>>((prevValue, username) => {
+      const _assignments = assignments[username];
+      _assignments.forEach((itemName) => {
+        if (prevValue.has(username)) {
+          prevValue.get(username)?.set(
+            itemName,
+            new Assignment({
               itemName,
-              new Assignment({
-                itemName,
-                username,
-              })
-            );
-          } else {
-            prevValue.set(
               username,
-              new Map([
-                [
+            })
+          );
+        } else {
+          prevValue.set(
+            username,
+            new Map([
+              [
+                itemName,
+                new Assignment({
                   itemName,
-                  new Assignment({
-                    itemName,
-                    username,
-                  }),
-                ],
-              ])
-            );
-          }
-        });
-        return prevValue;
-      },
-      new Map()
-    );
+                  username,
+                }),
+              ],
+            ])
+          );
+        }
+      });
+      return prevValue;
+    }, new Map());
   }
 }
