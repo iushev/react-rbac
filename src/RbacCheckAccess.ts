@@ -67,8 +67,9 @@ export default class RbacCheckAccess extends BaseCheckAccess {
           items: {},
           rules: {},
         };
+      } else {
+        throw err;
       }
-      throw err;
     }
 
     this.items = this.getRbacItems(_rbac);
