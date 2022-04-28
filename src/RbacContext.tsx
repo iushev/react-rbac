@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import { RuleParams, Rule, RuleCtor } from "@iushev/rbac";
 import RbacCheckAccess from "./RbacCheckAccess";
@@ -54,51 +54,41 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({
     }
   }, [rbacUrl, token]);
 
-  const value = useMemo(() => {
-    const checkAccess = async ({ roles, allow = true, match, params = {} }: CheckAccessOptions) => {
-      const matchRole = async () => {
-        if (!roles || roles.length === 0) {
-          return true;
-        }
+  const matchRole = useCallback(async (roles, params) => {
+    if (!roles || roles.length === 0) {
+      return true;
+    }
 
-        let _params = params;
-        if (typeof params === "function") {
-          _params = params();
-        }
-
-        for (const role of roles) {
-          if (role === "?") {
-            if (isGuest) {
-              return true;
-            }
-          } else if (role === "@") {
-            if (!isGuest) {
-              return true;
-            }
-          } else {
-            if (await rbac?.checkAccess(username, role, _params)) {
-              return true;
-            }
-          }
-        }
-
-        return false;
-      };
-
-      const matchCustom = () => {
-        if (!match) {
-          return true;
-        }
-        return match();
-      };
-
-      if (isSuperuser || ((await matchRole()) && matchCustom() && allow)) {
+    for (const role of roles) {
+      if (role === "?" && isGuest) {
+        // only guest users
         return true;
+      } else if (role === "@" && !isGuest) {
+        // only authenticated users
+        return true;
+      } else if (await rbac?.checkAccess(username, role, typeof params === "function" ? params() : params)) {
+        // only authenticated users that has permission
+        return true;
+      } else {
+        continue;
       }
+    }
 
-      return false;
-    };
+    return false;
+  }, []);
 
+  const matchCustom = useCallback((match) => {
+    if (!match) {
+      return true;
+    }
+    return match();
+  }, []);
+
+  const checkAccess = useCallback(async ({ roles, allow = true, match, params = {} }: CheckAccessOptions) => {
+    return isSuperuser || ((await matchRole(roles, params)) && matchCustom(match) && allow);
+  }, []);
+
+  const value = useMemo(() => {
     return {
       checkAccess,
     };
@@ -108,4 +98,13 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({
 };
 
 export const RbacConsumer = RbacContext.Consumer;
+
+export const useRbac = (): RbacContextProps => {
+  const ctx = useContext(RbacContext);
+  if (!ctx) {
+    throw new Error("useRbac must be rendered under RbacProvider");
+  }
+  return ctx;
+};
+
 export default RbacContext;

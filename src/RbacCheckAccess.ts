@@ -5,7 +5,7 @@ import {
   Assignment,
   BaseCheckAccess,
   BaseCheckAccessOptions,
-  Item,
+  IItem,
   ItemType,
   Permission,
   RBACResponse,
@@ -79,14 +79,13 @@ export default class RbacCheckAccess extends BaseCheckAccess {
   }
 
   private getRbacItems({ items }: RBACResponse) {
-    return Object.keys(items).reduce<Map<string, Item>>((prevValue, name) => {
+    return Object.keys(items).reduce<Map<string, IItem>>((prevValue, name) => {
       const item = items[name];
       const ItemClass = item.type === ItemType.permission ? Permission : Role;
       prevValue.set(
         name,
         new ItemClass({
           name,
-          type: item.type,
           description: item.description ?? null,
           ruleName: item.ruleName ?? null,
         })
@@ -96,7 +95,7 @@ export default class RbacCheckAccess extends BaseCheckAccess {
   }
 
   private getRbacParents({ items }: RBACResponse) {
-    return Object.keys(items).reduce<Map<string, Map<string, Item>>>((prevValue, name) => {
+    return Object.keys(items).reduce<Map<string, Map<string, IItem>>>((prevValue, name) => {
       const item = items[name];
       if (!item.children || item.children.length === 0) {
         return prevValue;
@@ -132,26 +131,9 @@ export default class RbacCheckAccess extends BaseCheckAccess {
       const _assignments = assignments[username];
       _assignments.forEach((itemName) => {
         if (prevValue.has(username)) {
-          prevValue.get(username)?.set(
-            itemName,
-            new Assignment({
-              itemName,
-              username,
-            })
-          );
+          prevValue.get(username)?.set(itemName, new Assignment(username, itemName));
         } else {
-          prevValue.set(
-            username,
-            new Map([
-              [
-                itemName,
-                new Assignment({
-                  itemName,
-                  username,
-                }),
-              ],
-            ])
-          );
+          prevValue.set(username, new Map([[itemName, new Assignment(username, itemName)]]));
         }
       });
       return prevValue;

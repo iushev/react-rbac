@@ -1,5 +1,5 @@
-import { useContext, useEffect, useState } from "react";
-import RbacContext, { CheckAccessOptions } from "./RbacContext";
+import { useEffect, useState } from "react";
+import { CheckAccessOptions, useRbac } from "./RbacContext";
 
 export type CheckAssessState = {
   checking: boolean;
@@ -7,7 +7,7 @@ export type CheckAssessState = {
 };
 
 function useCheckAccess({ roles, allow, params, match }: CheckAccessOptions) {
-  const rbac = useContext(RbacContext);
+  const rbac = useRbac();
 
   const [state, setState] = useState<CheckAssessState>({
     checking: true,
