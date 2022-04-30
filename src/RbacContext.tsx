@@ -54,28 +54,35 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({
     }
   }, [rbacUrl, token]);
 
-  const matchRole = useCallback(async (roles, params) => {
-    if (!roles || roles.length === 0) {
-      return true;
-    }
-
-    for (const role of roles) {
-      if (role === "?" && isGuest) {
-        // only guest users
+  const matchRole = useCallback(
+    async (roles, params) => {
+      if (!roles || roles.length === 0) {
         return true;
-      } else if (role === "@" && !isGuest) {
-        // only authenticated users
-        return true;
-      } else if (await rbac?.checkAccess(username, role, typeof params === "function" ? params() : params)) {
-        // only authenticated users that has permission
-        return true;
-      } else {
-        continue;
       }
-    }
 
-    return false;
-  }, []);
+      if (!rbac) {
+        return false;
+      }
+
+      for (const role of roles) {
+        if (role === "?" && isGuest) {
+          // only guest users
+          return true;
+        } else if (role === "@" && !isGuest) {
+          // only authenticated users
+          return true;
+        } else if (await rbac.checkAccess(username, role, typeof params === "function" ? params() : params)) {
+          // only authenticated users that has permission
+          return true;
+        } else {
+          continue;
+        }
+      }
+
+      return false;
+    },
+    [isGuest, rbac, username]
+  );
 
   const matchCustom = useCallback((match) => {
     if (!match) {
@@ -84,15 +91,18 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({
     return match();
   }, []);
 
-  const checkAccess = useCallback(async ({ roles, allow = true, match, params = {} }: CheckAccessOptions) => {
-    return isSuperuser || ((await matchRole(roles, params)) && matchCustom(match) && allow);
-  }, []);
+  const checkAccess = useCallback(
+    async ({ roles, allow = true, match, params = {} }: CheckAccessOptions) => {
+      return isSuperuser || ((await matchRole(roles, params)) && matchCustom(match) && allow);
+    },
+    [isSuperuser, matchCustom, matchRole]
+  );
 
   const value = useMemo(() => {
     return {
       checkAccess,
     };
-  }, [rbac, username, isGuest, isSuperuser]);
+  }, [checkAccess]);
 
   return <RbacContext.Provider value={value}>{children}</RbacContext.Provider>;
 };
