@@ -54,14 +54,6 @@ export default class RbacCheckAccess extends BaseCheckAccess {
     return super.checkAccess(username, itemName, params, this.assignments.get(username) ?? new Map());
   }
 
-  public async getAssignmentsByUser(username: string): Promise<Map<string, Assignment>> {
-    if (this.items.size === 0) {
-      await this.load();
-    }
-
-    return this.assignments.get(username) ?? new Map();
-  }
-
   public async load(): Promise<void> {
     let _rbac: RBACResponse;
     try {
