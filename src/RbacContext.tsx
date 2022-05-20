@@ -13,10 +13,12 @@ export type CheckAccessOptions = {
 };
 
 export type RbacContextProps = {
+  rbac: RbacCheckAccess | null;
   checkAccess: (options: CheckAccessOptions) => Promise<boolean>;
 };
 
 const RbacContext = React.createContext<RbacContextProps>({
+  rbac: null,
   checkAccess: async (_options: CheckAccessOptions) => true,
 });
 
@@ -100,9 +102,10 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({
 
   const value = useMemo(() => {
     return {
+      rbac,
       checkAccess,
     };
-  }, [checkAccess]);
+  }, [rbac, checkAccess]);
 
   return <RbacContext.Provider value={value}>{children}</RbacContext.Provider>;
 };
