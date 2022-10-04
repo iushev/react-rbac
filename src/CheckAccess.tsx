@@ -7,6 +7,7 @@ import NoAccess from "./NoAccess";
 export type CheckAccessProps = CheckAccessOptions & {
   busy?: React.ComponentType;
   noAccess?: React.ComponentType;
+  children: React.ReactNode;
 };
 
 const CheckAccess: React.FC<CheckAccessProps> = ({

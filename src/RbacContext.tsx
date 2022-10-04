@@ -29,6 +29,7 @@ export type RbacProviderProps = {
   isSuperuser: boolean;
   isGuest: boolean;
   ruleClasses: Map<string, RuleCtor<Rule>>;
+  children: React.ReactNode;
 };
 
 export const RbacProvider: React.FC<RbacProviderProps> = ({
@@ -57,7 +58,7 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({
   }, [rbacUrl, token]);
 
   const matchRole = useCallback(
-    async (roles, params) => {
+    async (roles: string[], params: RuleParams | RuleParamsFunction) => {
       if (!roles || roles.length === 0) {
         return true;
       }
@@ -86,7 +87,7 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({
     [isGuest, rbac, username]
   );
 
-  const matchCustom = useCallback((match) => {
+  const matchCustom = useCallback((match?: MatchFunction) => {
     if (!match) {
       return true;
     }
