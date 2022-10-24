@@ -38,9 +38,9 @@ export default class RbacCheckAccess extends BaseCheckAccess {
 
       if (options.authorization) {
         const token = options.authorization();
-        (config.headers.common as any as Record<string, string>)["Authorization"] = "Bearer " + token;
+        config.headers.Authorization = "Bearer " + token;
       } else {
-        (config.headers.common as any as Record<string, string>)["Authorization"] = "";
+        config.headers.Authorization = undefined;
       }
       return config;
     });
