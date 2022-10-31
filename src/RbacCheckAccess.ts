@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from "axios";
+import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
 import statusCodes from "http-status-codes";
 
 import {
@@ -54,11 +54,11 @@ export default class RbacCheckAccess extends BaseCheckAccess {
     return super.checkAccess(username, itemName, params, this.assignments.get(username) ?? new Map());
   }
 
-  public async load(): Promise<void> {
+  public async load(config?: AxiosRequestConfig): Promise<void> {
     let _rbac: RBACResponse;
     try {
       console.log("Load RBAC");
-      const response = await this.axiosInstance.get<RBACResponse>("/rbac");
+      const response = await this.axiosInstance.get<RBACResponse>("/rbac", config);
       _rbac = response.data;
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === statusCodes.NOT_FOUND) {
