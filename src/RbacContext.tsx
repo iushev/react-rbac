@@ -19,7 +19,7 @@ export type RbacContextProps = {
 
 const RbacContext = React.createContext<RbacContextProps>({
   rbac: null,
-  checkAccess: async (_options: CheckAccessOptions) => true,
+  checkAccess: async () => true,
 });
 
 export type RbacProviderProps = {

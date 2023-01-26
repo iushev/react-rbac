@@ -105,11 +105,17 @@ export default class RbacCheckAccess extends BaseCheckAccess {
           return;
         }
 
-        if (!prevValue.has(childName)) {
-          prevValue.set(childName, new Map());
+        let child = prevValue.get(childName);
+
+        if (!child) {
+          child = new Map();
+          prevValue.set(childName, child);
         }
 
-        prevValue.get(childName)!.set(name, this.items.get(name)!);
+        const item = this.items.get(name);
+        if (item) {
+          child.set(name, item);
+        }
       });
 
       return prevValue;
