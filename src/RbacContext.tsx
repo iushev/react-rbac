@@ -38,7 +38,7 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({
   token,
   isSuperuser,
   isGuest,
-  ruleClasses,
+  ruleClasses: _ruleClasses,
   children,
 }) => {
   const [rbac, setRbac] = useState<RbacCheckAccess | null>(null);
@@ -84,7 +84,7 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({
 
       return false;
     },
-    [isGuest, rbac, username]
+    [isGuest, rbac, username],
   );
 
   const matchCustom = useCallback((match?: MatchFunction) => {
@@ -98,7 +98,7 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({
     async ({ roles, allow = true, match, params = {} }: CheckAccessOptions) => {
       return isSuperuser || ((await matchRole(roles, params)) && matchCustom(match) && allow);
     },
-    [isSuperuser, matchCustom, matchRole]
+    [isSuperuser, matchCustom, matchRole],
   );
 
   const value = useMemo(() => {

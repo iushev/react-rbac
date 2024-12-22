@@ -20,7 +20,7 @@ export type RbacCheckAccessOptions = BaseCheckAccessOptions & {
 };
 
 export default class RbacCheckAccess extends BaseCheckAccess {
-  private axiosInstance: AxiosInstance;
+  private readonly axiosInstance: AxiosInstance;
 
   protected assignments: Map<string, Map<string, Assignment>> = new Map();
 
@@ -84,7 +84,7 @@ export default class RbacCheckAccess extends BaseCheckAccess {
           name,
           description: item.description ?? null,
           ruleName: item.ruleName ?? null,
-        })
+        }),
       );
       return prevValue;
     }, new Map());
