@@ -17,10 +17,15 @@ export type RbacContextProps = {
   checkAccess: (options: CheckAccessOptions) => Promise<boolean>;
 };
 
-const RbacContext = React.createContext<RbacContextProps>({
-  rbac: null,
-  checkAccess: async () => true,
-});
+const RbacContext = React.createContext<RbacContextProps | null>(null);
+
+export const useRbac = (): RbacContextProps => {
+  const ctx = useContext(RbacContext);
+  if (!ctx) {
+    throw new Error("useRbac must be rendered under RbacProvider");
+  }
+  return ctx;
+};
 
 export type RbacProviderProps = {
   username: string;
@@ -38,24 +43,32 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({
   token,
   isSuperuser,
   isGuest,
-  ruleClasses: _ruleClasses,
+  ruleClasses,
   children,
 }) => {
   const [rbac, setRbac] = useState<RbacCheckAccess | null>(null);
 
   useEffect(() => {
-    if (!token) {
-      setRbac(null);
-    } else {
-      const _rbac = new RbacCheckAccess({
-        path: rbacUrl,
-        authorization: () => {
-          return token;
-        },
-      });
-      _rbac.load().then(() => setRbac(_rbac));
-    }
-  }, [rbacUrl, token]);
+    const initRbac = async () => {
+      if (!token) {
+        setRbac(null);
+      } else {
+        const _rbac = new RbacCheckAccess({
+          path: rbacUrl,
+          authorization: () => {
+            return token;
+          },
+        });
+        ruleClasses.forEach((RuleClass, ruleName) => {
+          _rbac.ruleClasses.set(ruleName, RuleClass);
+        });
+        await _rbac.load();
+        setRbac(_rbac);
+      }
+    };
+
+    initRbac();
+  }, [rbacUrl, token, ruleClasses]);
 
   const matchRole = useCallback(
     async (roles: string[], params: RuleParams | RuleParamsFunction) => {
@@ -112,13 +125,5 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({
 };
 
 export const RbacConsumer = RbacContext.Consumer;
-
-export const useRbac = (): RbacContextProps => {
-  const ctx = useContext(RbacContext);
-  if (!ctx) {
-    throw new Error("useRbac must be rendered under RbacProvider");
-  }
-  return ctx;
-};
 
 export default RbacContext;
