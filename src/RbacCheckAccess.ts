@@ -122,7 +122,7 @@ export default class RbacCheckAccess extends BaseCheckAccess {
     return Object.keys(rules).reduce<Map<string, Rule>>((prevValue, name) => {
       const ruleData = rules[name];
       const RuleClass = this.ruleClasses.get(ruleData.data.typeName) ?? Rule;
-      const rule = new RuleClass(name, JSON.parse(ruleData.data.rule));
+      const rule = new RuleClass(name, JSON.parse(ruleData.data.ruleData));
       prevValue.set(name, rule);
       return prevValue;
     }, new Map());
