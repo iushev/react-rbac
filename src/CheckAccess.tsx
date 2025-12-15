@@ -3,6 +3,7 @@ import React from "react";
 import { CheckAccessOptions } from "./RbacContext";
 import useCheckAccess from "./useCheckAccess";
 import NoAccess from "./NoAccess";
+import NullComponent from "./NullComponent";
 
 export type CheckAccessProps = CheckAccessOptions & {
   busy?: React.ComponentType;
@@ -15,7 +16,7 @@ const CheckAccess: React.FC<CheckAccessProps> = ({
   allow,
   params,
   match,
-  busy: BusyComponent = () => null,
+  busy: BusyComponent = NullComponent,
   noAccess: NoAccessComponent = NoAccess,
   children,
 }) => {

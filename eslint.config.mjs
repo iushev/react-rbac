@@ -51,6 +51,12 @@ export default [
       sourceType: "module",
     },
 
+    settings: {
+      react: {
+        version: "detect",
+      },
+    },
+
     rules: {
       "@typescript-eslint/no-namespace": "off",
       "@typescript-eslint/no-explicit-any": "off",

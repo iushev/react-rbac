@@ -64,7 +64,7 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({
     };
 
     initRbac();
-  }, []);
+  }, [logging, rbacUrl, ruleClasses, token]);
 
   const checkAccess = useCallback(
     async ({ roles, allow = true, match, params = {} }: CheckAccessOptions) => {

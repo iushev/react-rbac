@@ -16,22 +16,22 @@ function useCheckAccess({ roles, allow, params, match }: CheckAccessOptions) {
 
   useEffect(() => {
     let subscribed = true;
-    setState({
-      checking: true,
-      hasAccess: false,
-    });
 
-    rbac
-      .checkAccess({ roles, allow, params, match })
-      .then((result) => {
+    const checkAccess = async () => {
+      setState({
+        checking: true,
+        hasAccess: false,
+      });
+
+      try {
+        const result = await rbac.checkAccess({ roles, allow, params, match });
         if (subscribed) {
           setState({
             checking: false,
             hasAccess: result,
           });
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error(err);
         if (subscribed) {
           setState({
@@ -39,7 +39,10 @@ function useCheckAccess({ roles, allow, params, match }: CheckAccessOptions) {
             hasAccess: false,
           });
         }
-      });
+      }
+    };
+
+    checkAccess();
 
     return () => {
       subscribed = false;
