@@ -9,18 +9,19 @@
   "main": "./lib/index",
   "types": "./lib/index",
   "scripts": {
-    "build": "tsc",
+    "build": "rimraf ./lib && tsc",
     "watch": "tsc -w --preserveWatchOutput",
     "test": "jest --runInBand",
     "test:watch": "jest --watchAll --runInBand",
     "coverage": "jest --coverage --runInBand",
     "lint": "eslint src",
-    "preversion": "rimraf ./lib && npm run build"
+    "preversion": "npm run build"
   },
   "dependencies": {
     "http-status-codes": "^2.3.0"
   },
   "devDependencies": {
+    "@eslint/compat": "^2.0.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.49.0",
@@ -37,7 +38,8 @@
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
-    "@iushev/rbac": "^1.0.51",
+    "@iushev/rbac": "^1.0.53",
+    "@iushev/rbac-web-manager": "^1.0.1",
     "axios": "^1.13.2",
     "react": "^17.0.0 || ^18.0.0 || ^19.0.0",
     "react-dom": "^17.0.0 || ^18.0.0 || ^19.0.0"

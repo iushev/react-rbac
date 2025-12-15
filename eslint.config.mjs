@@ -1,3 +1,6 @@
+import { fixupConfigRules, fixupPluginRules } from "@eslint/compat";
+import react from "eslint-plugin-react";
+import reactHooks from "eslint-plugin-react-hooks";
 import typescriptEslint from "@typescript-eslint/eslint-plugin";
 import prettier from "eslint-plugin-prettier";
 import globals from "globals";
@@ -19,10 +22,21 @@ export default [
   {
     ignores: ["**/lib/", "**/node_modules/"],
   },
-  ...compat.extends("eslint:recommended", "plugin:@typescript-eslint/recommended", "plugin:prettier/recommended"),
+  ...fixupConfigRules(
+    compat.extends(
+      "eslint:recommended",
+      "plugin:react/recommended",
+      "plugin:react/jsx-runtime",
+      "plugin:react-hooks/recommended",
+      "plugin:@typescript-eslint/recommended",
+      "prettier",
+    ),
+  ),
   {
     plugins: {
-      "@typescript-eslint": typescriptEslint,
+      react: fixupPluginRules(react),
+      "react-hooks": fixupPluginRules(reactHooks),
+      "@typescript-eslint": fixupPluginRules(typescriptEslint),
       prettier,
     },
 

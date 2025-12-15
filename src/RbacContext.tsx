@@ -1,7 +1,7 @@
 import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-import { RuleParams, Rule, RuleCtor } from "@iushev/rbac";
-import RbacCheckAccess from "./RbacCheckAccess";
+import { RuleParams, Rule, RuleCtor, RbacUser, matchRole, Identity, BaseManager } from "@iushev/rbac";
+import { WebManager } from "@iushev/rbac-web-manager";
 
 export type RuleParamsFunction = () => RuleParams;
 export type MatchFunction = () => boolean;
@@ -13,7 +13,7 @@ export type CheckAccessOptions = {
 };
 
 export type RbacContextProps = {
-  rbac: RbacCheckAccess | null;
+  rbacManager: BaseManager | null;
   checkAccess: (options: CheckAccessOptions) => Promise<boolean>;
 };
 
@@ -28,98 +28,71 @@ export const useRbac = (): RbacContextProps => {
 };
 
 export type RbacProviderProps = {
-  username: string;
+  identity: Identity;
   rbacUrl: string;
   token: string;
-  isSuperuser: boolean;
-  isGuest: boolean;
   ruleClasses: Map<string, RuleCtor<Rule>>;
+  afterInitManager?: (webManager: any) => void;
   children: React.ReactNode;
+  logging?: false | ((...args: any[]) => void);
 };
 
 export const RbacProvider: React.FC<RbacProviderProps> = ({
-  username,
+  identity,
   rbacUrl,
   token,
-  isSuperuser,
-  isGuest,
   ruleClasses,
   children,
+  logging,
 }) => {
-  const [rbac, setRbac] = useState<RbacCheckAccess | null>(null);
+  const [rbacManager, setRbacManager] = useState<BaseManager | null>(null);
 
   useEffect(() => {
     const initRbac = async () => {
-      if (!token) {
-        setRbac(null);
-      } else {
-        const _rbac = new RbacCheckAccess({
-          path: rbacUrl,
-          authorization: () => {
-            return token;
-          },
-        });
-        ruleClasses.forEach((RuleClass, ruleName) => {
-          _rbac.ruleClasses.set(ruleName, RuleClass);
-        });
-        await _rbac.load();
-        setRbac(_rbac);
-      }
+      const manager = new WebManager({
+        path: rbacUrl,
+        authorization: () => {
+          return token;
+        },
+        logging,
+      });
+      ruleClasses.forEach((RuleClass, ruleName) => {
+        manager.ruleClasses.set(ruleName, RuleClass);
+      });
+      await manager.load();
+      setRbacManager(manager);
     };
 
     initRbac();
-  }, [rbacUrl, token, ruleClasses]);
-
-  const matchRole = useCallback(
-    async (roles: string[], params: RuleParams | RuleParamsFunction) => {
-      if (!roles || roles.length === 0) {
-        return true;
-      }
-
-      if (!rbac) {
-        return false;
-      }
-
-      for (const role of roles) {
-        if (role === "?" && isGuest) {
-          // only guest users
-          return true;
-        } else if (role === "@" && !isGuest) {
-          // only authenticated users
-          return true;
-        } else if (await rbac.checkAccess(username, role, typeof params === "function" ? params() : params)) {
-          // only authenticated users that has permission
-          return true;
-        } else {
-          continue;
-        }
-      }
-
-      return false;
-    },
-    [isGuest, rbac, username],
-  );
-
-  const matchCustom = useCallback((match?: MatchFunction) => {
-    if (!match) {
-      return true;
-    }
-    return match();
   }, []);
 
   const checkAccess = useCallback(
     async ({ roles, allow = true, match, params = {} }: CheckAccessOptions) => {
-      return isSuperuser || ((await matchRole(roles, params)) && matchCustom(match) && allow);
+      if (!rbacManager) {
+        return false;
+      }
+
+      const matchCustom = (match?: MatchFunction) => {
+        if (!match) {
+          return true;
+        }
+        return match();
+      };
+
+      const user = new RbacUser(rbacManager);
+      user.identity = identity;
+
+      return user.isSuperuser || ((await matchRole({ user, roles, params })) && matchCustom(match) && allow);
     },
-    [isSuperuser, matchCustom, matchRole],
+    [identity, rbacManager],
   );
 
   const value = useMemo(() => {
     return {
-      rbac,
+      rbacManager,
       checkAccess,
     };
-  }, [rbac, checkAccess]);
+  }, [rbacManager, checkAccess]);
 
   return <RbacContext.Provider value={value}>{children}</RbacContext.Provider>;
 };
