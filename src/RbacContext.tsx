@@ -59,11 +59,14 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({
       ruleClasses.forEach((RuleClass, ruleName) => {
         manager.ruleClasses.set(ruleName, RuleClass);
       });
+      if (identity) {
+        await manager.load();
+      }
       setRbacManager(manager);
     };
 
     initRbac();
-  }, [logging, rbacUrl, ruleClasses, token]);
+  }, [identity, logging, rbacUrl, ruleClasses, token]);
 
   const checkAccess = useCallback(
     async ({ roles, allow = true, match, params = {} }: CheckAccessOptions) => {
