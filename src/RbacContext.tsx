@@ -28,7 +28,7 @@ export const useRbac = (): RbacContextProps => {
 };
 
 export type RbacProviderProps = {
-  identity: Identity;
+  identity: Identity | null;
   rbacUrl: string;
   token: string;
   ruleClasses: Map<string, RuleCtor<Rule>>;
@@ -59,7 +59,6 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({
       ruleClasses.forEach((RuleClass, ruleName) => {
         manager.ruleClasses.set(ruleName, RuleClass);
       });
-      await manager.load();
       setRbacManager(manager);
     };
 
