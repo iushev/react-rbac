@@ -10,6 +10,7 @@ export type CheckAccessOptions = {
   allow?: boolean;
   params?: RuleParams | RuleParamsFunction;
   match?: MatchFunction;
+  logging?: false | ((...args: any[]) => void);
 };
 
 export type RbacContextProps = {
@@ -69,7 +70,7 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({
   }, [identity, logging, rbacUrl, ruleClasses, token]);
 
   const checkAccess = useCallback(
-    async ({ roles, allow = true, match, params = {} }: CheckAccessOptions) => {
+    async ({ roles, allow = true, match, params = {}, logging: loggingOption = false }: CheckAccessOptions) => {
       if (!rbacManager) {
         return false;
       }
@@ -84,9 +85,9 @@ export const RbacProvider: React.FC<RbacProviderProps> = ({
       const user = new RbacUser(rbacManager);
       user.identity = identity;
 
-      return user.isSuperuser || ((await matchRole({ user, roles, params })) && matchCustom(match) && allow);
+      return user.isSuperuser || ((await matchRole({ user, roles, params, logging: loggingOption ? loggingOption : logging })) && matchCustom(match) && allow);
     },
-    [identity, rbacManager],
+    [identity, rbacManager, logging],
   );
 
   const value = useMemo(() => {

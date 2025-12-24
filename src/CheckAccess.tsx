@@ -19,8 +19,9 @@ const CheckAccess: React.FC<CheckAccessProps> = ({
   busy: BusyComponent = NullComponent,
   noAccess: NoAccessComponent = NoAccess,
   children,
+  logging,
 }) => {
-  const { checking, hasAccess } = useCheckAccess({ roles, allow, params, match });
+  const { checking, hasAccess } = useCheckAccess({ roles, allow, params, match, logging });
 
   if (checking) {
     return <BusyComponent />;
