@@ -7,7 +7,7 @@ export type CheckAccessState = {
 };
 
 function useCheckAccess({ roles, allow, params, match, logging }: CheckAccessOptions) {
-  const rbac = useRbac();
+  const { checkAccess } = useRbac();
 
   const [state, setState] = useState<CheckAccessState>({
     checking: true,
@@ -17,14 +17,14 @@ function useCheckAccess({ roles, allow, params, match, logging }: CheckAccessOpt
   useEffect(() => {
     let subscribed = true;
 
-    const checkAccess = async () => {
+    const _checkAccess = async () => {
       setState({
         checking: true,
         hasAccess: false,
       });
 
       try {
-        const result = await rbac.checkAccess({ roles, allow, params, match, logging });
+        const result = await checkAccess({ roles, allow, params, match, logging });
         if (subscribed) {
           setState({
             checking: false,
@@ -42,12 +42,12 @@ function useCheckAccess({ roles, allow, params, match, logging }: CheckAccessOpt
       }
     };
 
-    checkAccess();
+    _checkAccess();
 
     return () => {
       subscribed = false;
     };
-  }, [rbac, roles, allow, params, match, logging]);
+  }, [roles, allow, params, match, logging, checkAccess]);
 
   return state;
 }
